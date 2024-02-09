@@ -2,6 +2,7 @@ library(statsecol)
 library(tidyverse)
 library(viridisLite)
 library(ggridges)
+library(Distance)
 data(bowhead_LT)
 
 # Panic in the Disko Bay: Distance Sampling for Identifying Bowhead Whales
@@ -29,12 +30,12 @@ ggplot(data = bowhead_LT) +
   geom_histogram(aes(x = distance, fill = as.factor(size)), binwidth = 0.25)
 
 # manually set cutpoints somewhere in the middle
-cutpoints = seq(min(bowhead_LT$distance, na.rm = TRUE),
+histBreaks = seq(min(bowhead_LT$distance, na.rm = TRUE),
                 max(bowhead_LT$distance, na.rm = TRUE),
                 by=0.25)
 
 ggplot(data = bowhead_LT) + 
-  geom_histogram(aes(x = distance, fill = as.factor(size)), breaks = cutpoints) +
+  geom_histogram(aes(x = distance, fill = as.factor(size)), breaks = histBreaks) +
   labs(x = "Distance (nm)",
        y = "Observerd # Individuals",
        title = "title",
@@ -46,13 +47,61 @@ ggplot(data = bowhead_LT, aes(x = distance, y = factor(Region.Label))) +
   geom_density_ridges(stat = "binline",
                       bins = 10, draw_baseline = FALSE, na.rm = TRUE)
 
+# fit the NA row
+ggplot(data = bowhead_LT, aes(x = distance, y = factor(bf,
+                                                       levels = 0:3))) +
+  geom_density_ridges(stat = "binline", draw_baseline = FALSE, na.rm = TRUE)
+
+# more visualisation if desired
+bowheadGroup <- bowhead_LT %>% group_by(Region.Label) %>% 
+  summarise(n = sum(size, na.rm = TRUE),
+            Area = median(Area),
+            Effort = median(Effort))
+
+conversion.factor <- convert_units(distance_units = "kilometre", 
+                                   effort_units = "kilometre",
+                                   area_units = "square kilometre")
+
+# first look at no-covariate models
+# uniform doesn't match the data, so half-normal and hazard rate fit
+# adjustment terms do not improve over base key function
+bowhead.hn.null <- ds(data = bowhead_LT, key = "hn", adjustment = NULL,
+                      convert_units = conversion.factor)
+bowhead.hn.cos  <- ds(data = bowhead_LT, key = "hn", adjustment = "cos",
+                      convert_units = conversion.factor)
+bowhead.hn.herm <- ds(data = bowhead_LT, key = "hn", adjustment = "herm",
+                      convert_units = conversion.factor)
+bowhead.hn.poly <- ds(data = bowhead_LT, key = "hn", adjustment = "poly",
+                      convert_units = conversion.factor)
+bowhead.hr.null <- ds(data = bowhead_LT, key = "hr", adjustment = NULL,
+                      convert_units = conversion.factor)
+bowhead.hr.cos  <- ds(data = bowhead_LT, key = "hr", adjustment = "cos",
+                      convert_units = conversion.factor)
+bowhead.hr.herm <- ds(data = bowhead_LT, key = "hr", adjustment = "herm",
+                      convert_units = conversion.factor)
+bowhead.hr.poly <- ds(data = bowhead_LT, key = "hr", adjustment = "poly",
+                      convert_units = conversion.factor)
+
+# half-normal model fails to converge with size alone
+bowhead.hn.null.size <- ds(data = bowhead_LT, key = "hn", adjustment = NULL,
+                      convert_units = conversion.factor,
+                      formula = ~size)
+
+bowhead.hn.null.size <- ds(data = bowhead_LT, key = "hr", adjustment = NULL,
+                           convert_units = conversion.factor,
+                           formula = ~size + as.factor(Region.Label) + as.factor(bf))
 
 
-# questions
-# documentation says that "group ID, observations of >1 individuals will have a ow per animal, but a shared Sample.Label, a numeric vector; however object #47 w/ size = 2 only has one row (row 43 in the initial order). Is this accurate?
-
-# how to deal with issues where animals run or hide?
-# when they run, we can use aggressive binning to remove non-decreasing portions of g(x)
-# when they hide, we can use a cutoff until we're confident that avoidance behaviour have ceased (at a certain distance)
-# this leads to no bias but obviously a poor fit; otherwise we have a breakdown in some assumptions and resulting bias
-# THEN, we assume perfect detecibility at the truncation point (instead of g(0) = 1)
+bowhead.hr.null.size <- ds(data = bowhead_LT, key = "hr", adjustment = NULL,
+                      convert_units = conversion.factor,
+                      formula = ~size)
+bowhead.hr.cos.size  <- ds(data = bowhead_LT, key = "hr", adjustment = "cos",
+                      convert_units = conversion.factor,
+                      formula = ~size,
+                      max_adjustments = 5)
+bowhead.hr.herm.size <- ds(data = bowhead_LT, key = "hr", adjustment = "herm",
+                      convert_units = conversion.factor,
+                      formula = ~size)
+bowhead.hr.poly.size <- ds(data = bowhead_LT, key = "hr", adjustment = "poly",
+                      convert_units = conversion.factor,
+                      formula = ~size)
