@@ -184,3 +184,9 @@ sizeRawHN_N <- dht(model = sizeRawHN$ddf,
                     obs.table = observation_table)
 
 
+# in reality, we're likely underestimating the true population size due to imperfect detection across-the-board
+# incredibly unlikely that all animals become available at equal rates (since whales mostly are under the water and thsu undetected)
+# in short, we have availability bias that is best dealt with using hidden markov models per the original paper
+# EX: McLaren and Laake's correction factors
+# https://rdrr.io/github/david-borchers/hmltm/f/vignettes/hmltmExercise_solution.Rmd
+# http://workshops.distancesampling.org/standrews-2019/adv/slides/availability.pdf
