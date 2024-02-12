@@ -183,6 +183,11 @@ sizeRawHN_N <- dht(model = sizeRawHN$ddf,
                     sample.table = sample_table,
                     obs.table = observation_table)
 
+# output the models
+save(baseRawHN, baseRawHR, sizeRawHN, sizeRawHR,
+     baseBinHN, baseBinHR, sizeBinHN, sizeBinHR,
+     baseTruncHN, baseTruncHR, sizeTruncHN, sizeTruncHR,
+     file="df-models.RData")
 
 # in reality, we're likely underestimating the true population size due to imperfect detection across-the-board
 # incredibly unlikely that all animals become available at equal rates (since whales mostly are under the water and thsu undetected)
