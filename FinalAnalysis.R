@@ -105,7 +105,7 @@ summarize_ds_models(baseBinHN,
                     sizeBinHR, output = "plain")
 
 # looks like the binned models have a very similar fit (if not identical) to the raw data
-par(mfrow = c(2,2))
+par(mfrow = c(1,2))
 plot(baseBinHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd = 2, 
      #breaks = histBreaks2,
      ylab = "Detection probability (g(x))", xlab = "Distance", las=1,
