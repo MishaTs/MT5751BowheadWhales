@@ -5,15 +5,61 @@ date: "`r Sys.Date()`"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+library(statsecol)
+library(ggplot2)
+library(dplyr)
 ```
 
 ## Abstract
 
 ## Introduction
+In this report, we aim to use distance sampling methods to estimate the abundance of Bowhead whales in Disko Bay. As the data show some observer avoidance, we also wish to explore different approaches used to deal with this issue. 
 
 ## Methods
+Visual aerial surveys were conducted along 41 systematically placed east-west along the West Greenland coast, with a combined length of 4,445km. There were two observation platforms which each recorded the declination angle using inclinometers and the times of the first sighting and when the whale passed abeam, which were used to calculate the perpendicular and forward distances respectively. Both observers also recorded group size, and if there were any differences in size or declination between the two observers the mean of the two values was taken. The Beaufort sea state was recorded for each survey. The distances were left-truncated to 100m as the view was obscured close to the transect line(Rekdal et al. 2015). In total there were 58 valid whale observations. 
 
+```{r Initial-histogram, echo = F, fig.cap="Histogram of bowhead whale detection distances, coloured by size of detected group", fig.height=3}
+ggplot(data = bowhead_LT) + 
+  geom_histogram(aes(x = distance, fill = as.factor(size)), 
+                 breaks = seq(0,2.4, length.out = 12)) +
+  labs(x = "Distance truncated by 0.1 km",
+       y = "Observed # individuals",
+       title = "Raw bowhead whale observations",
+       subtitle = "Using 12 bins and minor left-truncated distances",
+       fill = "Group size") + 
+  theme_bw()
+```
+An initial plot of the detection distances suggests there could be some line avoidance, as more whales were detected further away from the plane than on the transect, even after the left-truncation. This could violate the assumption in distance sampling that animals are distributed independently with respect to the transect, or the assumption that all animals on the line are detected, depending on whether the whales are hiding or moving away in response to the plane (Buckland et al, 2015). Equally, this could just be stochastic variation as there is only a difference of 4 observations between the 0-0.2 bin and the 0.4-0.6 bin. 
+We considered 3 approaches to deal with this problem. Firstly, treating the difference in detection as random variation and fitting detection functions as normal. This preserves all the observations but will result in overestimating the detection probability (and therefore underestimating abundance) if detection is not certain on the line. Another option is to bin the distances into 0-0.6km, 0.6-0.9km, …, 2.1-2.4km categories so that there are more observations in the first group than the others. This assumes the whales moved away from the observers, so those that would have been detected on the transect were instead seen up to 0.6km away. This method deals well with the potentially violated assumptions, but in grouping the data we lose a lot of information. 
+```{r binned-histogram, echo = F, fig.cap = "Histogram of bowhead whale detection distances using custom bins, coloured by size of detected group", fig.height=3}
+histBreaks2 <- c(0, 0.6, 0.9, 1.2, 1.5, 1.8, 2.1, max(bowhead_LT$distance, 
+                                                      na.rm = TRUE))
+ggplot(data = bowhead_LT) + 
+  geom_histogram(aes(x = distance, fill = as.factor(size)), breaks = histBreaks2) +
+  labs(x = "Distance truncated by 0.1 km",
+       y = "Observerd # Individuals",
+       title = "Binned bowhead whale observations",
+       subtitle = "Using 7 custom bins with minor left-truncated distances",
+       fill = "Group size") + 
+  theme_bw()
+```
+The final option we considered is to left-truncate the distances up to the peak in detections at 0.64km. This method ensures we have the monotonic decline in detections with increasing distance, but again loses a lot of information and assumes that detection is certain 0.64km away from the plane. The monotonic decrease in detection allowed complex models with multiple covariates and adjustment terms to be fitted successfully, which didn’t happen for the other methods. However, given the small sample size these models likely suffer from over-fitting. 
+```{r truncated-histogram, fig.cap = "Histogram of truncated distances, coloured by size of group detected", fig.height=3}
+bowhead_LT_Trunc = bowhead_LT %>% filter(distance >= 0.64) %>%
+  mutate(distance = distance - 0.64)
+ggplot(data = bowhead_LT_Trunc) + 
+  geom_histogram(aes(x = distance, fill = as.factor(size)),
+                 bins = 14) +
+  labs(x = "Distance left-truncated by 0.74 km",
+       y = "Observerd # Individuals",
+       title = "Filtered bowhead whale observations",
+       subtitle = "Using 14 bins with substantially left-truncated distances",
+       fill = "Group size") + 
+  theme_bw()
+```
+We used the Distance package to fit models using a maximum likelihood approach. For each data set (unedited, binned and truncated) we fitted half normal and hazard rate detection functions with all combinations of adjustment terms (cos, Hermite and polynomial) and covariates (group size and Beaufort sea state). We used AIC to compare between models fitted to the same data set. 
+ 
 ## Results
 
 ## Discussion
