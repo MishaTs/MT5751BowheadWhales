@@ -2,6 +2,7 @@
 title: "Report"
 output: pdf_document
 date: "`r Sys.Date()`"
+bookdown: pdf_document2
 ---
 
 ```{r setup, include=FALSE}
