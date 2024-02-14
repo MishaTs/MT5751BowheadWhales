@@ -1,5 +1,6 @@
 ---
-title: "Panic in the Disko Bay: Distance Sampling for Identifying Bowhead Whales"
+title: "Panic in the Disko Bay: Estimating Greenland Bowhead Whale Detection and Abundance with Distance Sampling"
+author: "Misha Tseitlin, Louise Blackman, Dometa Tuomaite"
 date: "`r format(Sys.Date(), format='%d %B %Y')`"
 fontsize: 11pt
 urlcolor: blue
@@ -37,7 +38,7 @@ load("dfModels.RData")
 \Large
 {\bf Project 1: Distance Sampling}
 
-\vspace{5cm}
+\vspace{4cm}
 
 ```{r uni_logo, echo=F, out.width="50%"}
 knitr::include_graphics("01-standard-vertical-black-text.png")
@@ -64,11 +65,11 @@ In this report, we aim to use distance sampling methods to estimate the abundanc
 ## Methods
 Visual aerial surveys were conducted along 41 systematically placed east-west along the West Greenland coast, with a combined length of 4,445km. There were two observation platforms which each recorded the declination angle using inclinometers and the times of the first sighting and when the whale passed abeam, which were used to calculate the perpendicular and forward distances respectively. Both observers also recorded group size, and if there were any differences in size or declination between the two observers the mean of the two values was taken. The Beaufort sea state was recorded for each survey. The distances were left-truncated to 100m as the view was obscured close to the transect line(Rekdal et al. 2015). In total there were 58 valid whale observations. 
 
-```{r Initial-histogram, echo = F, fig.cap="Histogram of bowhead whale detection distances, coloured by size of detected group", fig.height=3}
+```{r Initial-histogram, echo = F, fig.cap="Histogram of bowhead whale detection distances, coloured by size of detected group"}
 ggplot(data = bowhead_LT) + 
   geom_histogram(aes(x = distance, fill = as.factor(size)), 
                  breaks = seq(0,2.4, length.out = 12)) +
-  labs(x = "Distance truncated by 0.1 km",
+  labs(x = "Distance left-truncated by 0.1 km",
        y = "Observed # individuals",
        title = "Raw bowhead whale observations",
        subtitle = "Using 12 bins and minor left-truncated distances",
@@ -77,12 +78,13 @@ ggplot(data = bowhead_LT) +
 ```
 An initial plot of the detection distances suggests there could be some line avoidance, as more whales were detected further away from the plane than on the transect, even after the left-truncation. This could violate the assumption in distance sampling that animals are distributed independently with respect to the transect, or the assumption that all animals on the line are detected, depending on whether the whales are hiding or moving away in response to the plane (Buckland et al, 2015). Equally, this could just be stochastic variation as there is only a difference of 4 observations between the 0-0.2 bin and the 0.4-0.6 bin. 
 We considered 3 approaches to deal with this problem. Firstly, treating the difference in detection as random variation and fitting detection functions as normal. This preserves all the observations but will result in overestimating the detection probability (and therefore underestimating abundance) if detection is not certain on the line. Another option is to bin the distances into 0-0.6km, 0.6-0.9km, …, 2.1-2.4km categories so that there are more observations in the first group than the others. This assumes the whales moved away from the observers, so those that would have been detected on the transect were instead seen up to 0.6km away. This method deals well with the potentially violated assumptions, but in grouping the data we lose a lot of information. 
-```{r binned-histogram, echo = F, fig.cap = "Histogram of bowhead whale detection distances using custom bins, coloured by size of detected group", fig.height=3}
+
+```{r binned-histogram, echo = F, fig.cap = "Histogram of bowhead whale detection distances using custom bins, coloured by size of detected group"}
 histBreaks2 <- c(0, 0.6, 0.9, 1.2, 1.5, 1.8, 2.1, max(bowhead_LT$distance, 
                                                       na.rm = TRUE))
 ggplot(data = bowhead_LT) + 
   geom_histogram(aes(x = distance, fill = as.factor(size)), breaks = histBreaks2) +
-  labs(x = "Distance truncated by 0.1 km",
+  labs(x = "Distance left-truncated by 0.1 km",
        y = "Observerd # Individuals",
        title = "Binned bowhead whale observations",
        subtitle = "Using 7 custom bins with minor left-truncated distances",
@@ -90,7 +92,7 @@ ggplot(data = bowhead_LT) +
   theme_bw()
 ```
 The final option we considered is to left-truncate the distances up to the peak in detections at 0.64km. This method ensures we have the monotonic decline in detections with increasing distance, but again loses a lot of information and assumes that detection is certain 0.64km away from the plane. The monotonic decrease in detection allowed complex models with multiple covariates and adjustment terms to be fitted successfully, which didn’t happen for the other methods. However, given the small sample size these models likely suffer from over-fitting. 
-```{r truncatedHistogram, fig.cap = "Histogram of truncated distances, coloured by size of group detected", fig.height=3}
+```{r truncatedHistogram, fig.cap = "Histogram of truncated distances, coloured by size of group detected"}
 bowhead_LT_Trunc = bowhead_LT %>% filter(distance >= 0.64) %>%
   mutate(distance = distance - 0.64)
 ggplot(data = bowhead_LT_Trunc) + 
@@ -107,9 +109,11 @@ We used the Distance package to fit models using a maximum likelihood approach. 
  
 ## Results
 
-```{r chunkName1, echo = FALSE}
+```{r table1, echo = FALSE}
 table <- data.frame(
-	Model = c("Base HN + size", "Base HN", "Binned HN + size", "Binned HN", "Truncated HR + size", "Truncated HN", "Truncated HN + size"),
+	`Detection Function` = c("Half Normal", "Half Normal", "Half Normal", "Half Normal", "Hazard Rate", "Half Normal", "Half Normal"),
+	Data = c("Base","Base","Binned","Binned","Truncated","Truncated","Truncated"),
+	`Size Covariate` = c("Yes","No","Yes","No","Yes","No","Yes"),
 	Estimate = c(212.07, 228.82, 212.84, 229.54, 1803.36, 519.51, 608.75),
 	SE = c(65.62, 71.45, 66.14, 72.22, 1346.22, 90.74, 154.26),
 	`Lower CI` = c(112.13, 122.00, 112.32, 121.94, 461.56, 363.25, 356.93),
@@ -117,10 +121,12 @@ table <- data.frame(
 	AIC = c(86.03, 86.32, 197.58, 197.91, 27.20, 28.43, 28.73)
 )
 
-knitr::kable(table, caption = "Model Summary Table")
+# make sure all table contents are justified the same way
+# fix column names
+knitr::kable(table, caption = "Estimated abundance from best-performing models (by AIC)")
 ```
 
-```{r chunkName2, echo = FALSE}
+```{r table2, echo = FALSE}
 table2 <- data.frame(
 	Model = c("Base HN + size", "Binned HN + size", "Truncated HN + size"),
 	`Size Coefficient` = c(6.16, 5.64, -0.51),
@@ -128,12 +134,12 @@ table2 <- data.frame(
 	`Significant?` = c("No", "No", "Yes")
 )
 
-knitr::kable(table2, caption = "Significance of 'Size' covariate")
+knitr::kable(table2, caption = "Estimates (and errors) of size on detectability")
 ```
 
 Given raw data set the best model selected by AIC was half-normal detection function with size covariate and no adjustments. The model estimates whale abundance as 212 with confidence interval between 112.13 and 401.06. However, covariate included is not statistically significant, therefore, model without covariate gives similar estimate of whale abundance (229) with confidence interval between 112.13 and 401.06.
 
-```{r rawDataModels, echo = F, results = FALSE, fig.cap="Detection functions using raw data"}
+```{r rawDataModels, echo = F, results = FALSE, fig.height = 7, fig.cap="Detection functions using original data"}
 par(mfrow = c(2,2))
 plot(baseRawHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd = 2, 
      breaks = histBreaks2,
@@ -148,7 +154,7 @@ plot(sizeRawHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd 
 # both models have solid GOF but the covariate model is slightly better from visual QQ inspection
 # get rid of ks = TRUE for  improvements
 gof_ds(baseRawHN, main="Base Observed vs. Expected CDF")#, ks = TRUE)
-gof_ds(sizeRawHN, main="Covariate Observed vs. Expected CDF")#, ks = TRUE)
+gof_ds(sizeRawHN, main="Size Observed vs. Expected CDF")#, ks = TRUE)
 ```
 
 When using binning, the best model selected by AIC is half-normal with no adjustments and size covariate. Similar to model using raw data, it gives estimate of abundance of 213 and confidence interval between 112.32 and 403.31. Covariate is not statistically significant. 
@@ -167,7 +173,7 @@ plot(sizeBinHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd 
 
 However, preferred model chosen using truncated data is quite different. The best model is hazard rate with size covariate, which gives an estimate of 1803 whales with confidence interval between 461.56 and 7045.88. It is worth noting, that size covariate is significant here. However, given huge standard error, there’s a lot of uncertainty, therefore, it is likely that the model largely overestimates. It is then followed by half normal model with no covariates and half normal model with size covariate.
 
-```{r rawDataModels3, echo = F, results = FALSE, fig.cap="Detection functions using truncated data"}
+```{r rawDataModels3, echo = F, results = FALSE, fig.height = 5, fig.cap="Detection functions using truncated data"}
 par(mfrow = c(2,3))
 plot(baseTruncHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd = 2, 
      #breaks = histBreaks2,
@@ -185,9 +191,9 @@ plot(sizeTruncHR, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lw
      main = "Hazard rate model with covariates")
 # both models have solid GOF but the covariate model is slightly better from visual QQ inspection
 # get rid of ks = TRUE for  improvements
-gof_ds(baseTruncHN, main="Base HN Observed vs. Expected CDF")#, ks = TRUE)
-gof_ds(sizeTruncHN, main="Covariate HN Observed vs. Expected CDF")#, ks = TRUE)
-gof_ds(sizeTruncHR, main="Covariate HR Observed vs. Expected CDF")#, ks = TRUE)
+gof_ds(baseTruncHN, main="Base HN CDF Quantiles")#, ks = TRUE)
+gof_ds(sizeTruncHN, main="Covariate HN CDF Quantiles")#, ks = TRUE)
+gof_ds(sizeTruncHR, main="Covariate HR CDF Quantiles")#, ks = TRUE)
 ```
 
 Even though detection functions using truncated data has lowest AIC, it overestimates whale abundance. The reason might be limited to sample size and extrapolation based on the area we have no data about. Therefore, it might be best to use half normal detection function with size as a covariate to get the best estimate of whale abundance.
@@ -202,8 +208,8 @@ Violation of these assumptions bias our estimates of whale abundance – models 
 \newpage
 # Code Appendix
 
-```{r fullCode, eval = FALSE}
-# cumulative analysis of the data
+```{r fullCode, eval = FALSE, include  = TRUE, echo = TRUE}
+# import packages and data
 library(statsecol)
 library(tidyverse)
 library(viridisLite)
@@ -224,9 +230,11 @@ ggplot(data = bowhead_LT) +
 
 # aggressive binning
 # definitely half-normal is the better fit here
-histBreaks2 <- c(0, 0.6, 0.9, 1.2, 1.5, 1.8, 2.1, max(bowhead_LT$distance, na.rm = TRUE))
+histBreaks2 <- c(0, 0.6, 0.9, 1.2, 1.5, 1.8, 2.1, max(bowhead_LT$distance, 
+                                                      na.rm = TRUE))
 ggplot(data = bowhead_LT) + 
-  geom_histogram(aes(x = distance, fill = as.factor(size)), breaks = histBreaks2) +
+  geom_histogram(aes(x = distance, fill = as.factor(size)), 
+                 breaks = histBreaks2) +
   labs(x = "Distance truncated by 0.1 km",
        y = "Observerd # Individuals",
        title = "Binned bowhead whale observations",
@@ -235,9 +243,11 @@ ggplot(data = bowhead_LT) +
   theme_bw()
 
 #truncate to get decreasing observations with distance
-bowhead_LT_Trunc = bowhead_LT %>% filter(distance >= 0.64) %>% mutate(distance = distance - 0.64)
-#plot the data
-# both half-normal and hazard rate appear feasible here
+bowhead_LT_Trunc = bowhead_LT %>% filter(distance >= 0.64) %>% 
+  mutate(distance = distance - 0.64)
+
+# plot the new data
+# both half-normal and hazard rate appear possible here
 ggplot(data = bowhead_LT_Trunc) + 
   geom_histogram(aes(x = distance, fill = as.factor(size)), bins = 14) +
   labs(x = "Distance left-truncated by 0.74 km",
@@ -251,8 +261,9 @@ conversion.factor <- convert_units(distance_units = "kilometre",
                                    effort_units = "kilometre",
                                    area_units = "square kilometre")
 
-# using model fits from separate alternatives, we'll only fit no-adjustment HN, HR, and size covariates
-# not specifying adjustment = NULL because ds() will automatically pick the low AIC version
+# using model fits from separate alternatives,
+# we'll only fit no-adjustment HN, HR, and size covariates
+# ds() will automatically pick the low AIC version (adjustment = NULL)
 baseRawHN <- ds(data = bowhead_LT, key = "hn",
                 convert_units = conversion.factor)
 baseRawHR <- ds(data = bowhead_LT, key = "hr",
@@ -272,17 +283,21 @@ summarize_ds_models(baseRawHN,
                     sizeRawHR, output = "plain")
 
 par(mfrow = c(2,2))
-plot(baseRawHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd = 2, 
+plot(baseRawHN, which=2, pl.col = adjustcolor("steelblue",0.5), border=NULL, 
+     lwd = 2, 
      breaks = histBreaks2,
      ylab = "Detection probability (g(x))", xlab = "Distance", las=1,
      main = "Base half-normal model")
-# interesting that the covariate model assumes perfect detection of large-sized groups
-# this is a quirk of the limited data --> only Region 2 has any within-group variation in size
-plot(sizeRawHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd = 2, 
+# covariate model assumes perfect detection of large-sized groups
+# this is a quirk of the limited data 
+# only Region 2 has any within-group variation in size
+plot(sizeRawHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, 
+     lwd = 2, 
      breaks = histBreaks2,
      ylab = "Detection probability (g(x))", xlab = "Distance", las=1,
      main = "Half-normal model with covariates")
-# both models have solid GOF but the covariate model is slightly better from visual QQ inspection
+# both models have solid GOF
+# covariate model is slightly better from visual QQ inspection
 gof_ds(baseRawHN, main="Base Observed vs. Expected CDF", ks = TRUE)
 gof_ds(sizeRawHN, main="Covariate Observed vs. Expected CDF", ks = TRUE)
 
@@ -309,16 +324,16 @@ summarize_ds_models(baseBinHN,
                     sizeBinHN, 
                     sizeBinHR, output = "plain")
 
-# looks like the binned models have a very similar fit (if not identical) to the raw data
+# binned models have a very similar fit (if not identical) to the raw data
 par(mfrow = c(1,2))
-plot(baseBinHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd = 2, 
-     #breaks = histBreaks2,
+plot(baseBinHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, 
+     lwd = 2, 
      ylab = "Detection probability (g(x))", xlab = "Distance", las=1,
      main = "Base half-normal model")
-# interesting that the covariate model assumes perfect detection of large-sized groups
-# this is a quirk of the limited data --> only Region 2 has any within-group variation in size
-plot(sizeBinHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd = 2, 
-     #breaks = histBreaks2,
+# covariate model still assumes perfect detection of large-sized groups
+# still a quirk of the data due to between-strata variation
+plot(sizeBinHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, 
+     lwd = 2, 
      ylab = "Detection probability (g(x))", xlab = "Distance", las=1,
      main = "Half-normal model with covariates")
 # GOF produce output but cannot generate plots
@@ -327,7 +342,7 @@ gof_ds(baseBinHN, main="Base Observed vs. Expected CDF", ks = TRUE)
 gof_ds(sizeBinHN, main="Covariate Observed vs. Expected CDF", ks = TRUE)
 
 # finally repeat for truncated data
-# truncated data actually prefers more complex fits with more covariates and adjustment terms
+# truncated data prefers complex fits w/ more covariates and adjustments
 baseTruncHN <- ds(data = bowhead_LT_Trunc, key = "hn",
                 convert_units = conversion.factor)
 baseTruncHR <- ds(data = bowhead_LT_Trunc, key = "hr",
@@ -340,33 +355,35 @@ sizeTruncHR <- ds(data = bowhead_LT_Trunc, key = "hr", adjustment = NULL,
                 formula = ~size)
 
 # truncated data shows very different rankings
-# hazard rate is preferred w/ size covariate, then basic hanf-normal, then size + HN, finally base HR
+# hazard rate is preferred w/ size covariate 
+# then basic hanf-normal, then size + HN, finally base HR
 summarize_ds_models(baseTruncHN, 
                     baseTruncHR, 
                     sizeTruncHN, 
                     sizeTruncHR, output = "plain")
 
-
 # looks like the binned models have exactly the same fit as the raw data
 par(mfrow = c(2,3))
-plot(baseTruncHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd = 2, 
-     #breaks = histBreaks2,
+plot(baseTruncHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL,
+     lwd = 2, 
      ylab = "Detection probability (g(x))", xlab = "Distance", las=1,
      main = "Base half-normal model")
-# interesting that the covariate model assumes perfect detection of large-sized groups
-# this is a quirk of the limited data --> only Region 2 has any within-group variation in size
-plot(sizeTruncHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd = 2, 
-     #breaks = histBreaks2,
+# covariate model no longer assumes perfect detection of large-sized groups
+plot(sizeTruncHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, 
+     lwd = 2, 
      ylab = "Detection probability (g(x))", xlab = "Distance", las=1,
      main = "Half-normal model with covariates")
-plot(sizeTruncHR, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd = 2, 
-     #breaks = histBreaks2,
+plot(sizeTruncHR, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, 
+     lwd = 2, 
      ylab = "Detection probability (g(x))", xlab = "Distance", las=1,
      main = "Hazard rate model with covariates")
-# both models have solid GOF but the covariate model is slightly better from visual QQ inspection
-gof_ds(baseTruncHN, main="Base Half-Normal Observed vs. Expected CDF", ks = TRUE)
-gof_ds(sizeTruncHN, main="Covariate Half-Normal Observed vs. Expected CDF", ks = TRUE)
-gof_ds(sizeTruncHR, main="Covariate Hazard Rate Observed vs. Expected CDF", ks = TRUE)
+# covariate model still slightly better from visual QQ plot
+gof_ds(baseTruncHN, main="Base Half-Normal Observed vs. Expected CDF", 
+       ks = TRUE)
+gof_ds(sizeTruncHN, main="Covariate Half-Normal Observed vs. Expected CDF",
+       ks = TRUE)
+gof_ds(sizeTruncHR, main="Covariate Hazard Rate Observed vs. Expected CDF", 
+       ks = TRUE)
 
 # output the models for consistency and processing speed
 save(baseRawHN, baseRawHR, sizeRawHN, sizeRawHR,
@@ -377,17 +394,22 @@ save(baseRawHN, baseRawHR, sizeRawHN, sizeRawHR,
 # break out abundance under both models by region
 # generate abundance estimates for the best raw data models
 region_table <- unique(bowhead_LT[,c("Region.Label", "Area")])
-sample_table <- unique(bowhead_LT[,c("Region.Label", "Sample.Label", "Effort")])
-observation_table <- unique(bowhead_LT[,c("object", "Region.Label", "Sample.Label")])
+sample_table <- unique(bowhead_LT[,c("Region.Label", 
+                                     "Sample.Label", 
+                                     "Effort")])
+observation_table <- unique(bowhead_LT[,c("object", 
+                                          "Region.Label", 
+                                          "Sample.Label")])
 # raw model
 baseRawHN_N <- dht(model = baseRawHN$ddf, 
                     region.table = region_table,
                     sample.table = sample_table,
                     obs.table = observation_table)
 # covariate model
-# lower overall SE driven by Regions 2 and 9 while 3, 11, 12, and 15 have increased SE
+# lower overall SE driven by Regions 2 and 9
+# Regions 3, 11, 12, and 15 have increased SE
 # abundance decreases in regions 2 and 9 while increasing elsewhere
-# this is because Regions 2 and 9 are the only sub-regions with size > 1 observations
+# Regions 2 and 9 are the only sub-regions with size > 1 observations
 sizeRawHN_N <- dht(model = sizeRawHN$ddf, 
                     region.table = region_table,
                     sample.table = sample_table,
@@ -415,15 +437,17 @@ sizeTruncHN_N <- dht(model = sizeTruncHN$ddf,
                    obs.table = observation_table)
 
 # check variance using bootstraps rather than delta method
-# delta-method approximation that assumes independence between uncertainty in the detection function and variability in encounter rate
+# delta-method approximation assumes independence between
+# uncertainty in the detection function and variability in encounter rate
+
 # takes ~3 minutes on my computer, likely longer for most
 # check or delete the "cores = " if you don't have 10 cores on your computer
-# for the full process see: http://examples.distancesampling.org/Distance-variance/variance-distill.html
 est.boot <- bootdht(model=sizeRawHN, flatfile=bowhead_LT,
                     summary_fun=bootdht_Nhat_summarize,
                     convert_units=conversion.factor, nboot=999, cores=10)
 alpha <- 0.05
-# interestingly, the lower bound of our estimate is very poorly constrained with a 95% CI between 0 and 276
+# the lower bound of our estimate is very poorly constrained 
+# 95% CI between 0 and 276
 bootci <- quantile(est.boot$Nhat, probs = c(alpha/2, 1-alpha/2),
                    na.rm=TRUE)
 
@@ -444,7 +468,8 @@ abline(v=bootci, lwd=2, lty=2)
 #                    na.rm=TRUE)
 
 
-# this following section is for transparency on full model fitting attempted with the minorly truncated data
+# this following section is for transparency on full model fitting
+# attempted with the original, minorly truncated data
 # play around with some adjustment terms with the size model
 # adjustment terms generally aren't included in covariates for whatever reason
 # Cosine(2) is preferred but never monotonic so that's not it
