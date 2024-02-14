@@ -56,6 +56,7 @@ MT5751: Estimating Animal Abundance and Biodiversity \\
 \end{centering}
 
 \newpage
+\pagenumbering{arabic} 
 
 # Abstract
 
