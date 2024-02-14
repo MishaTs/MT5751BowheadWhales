@@ -1,5 +1,5 @@
 # MT5751BowheadWhales
-MT5751 Group Assignment 1: Transect Distance Sampling for Bowhead Whale Data
+**MT5751 Group Assignment 1: Transect Distance Sampling for Bowhead Whale Data**
 
 Using data from [Rekdal et al. (2015)](https://doi.org/10.1111/mms.12150), we conducted simple distance sampling analysis on three different alternatives of the processed dataset--original, binned, and truncated. We considered repeating this another three times to stratify within the analysis of the detection function; but generated estimates were identical; so this was omitted.
 
