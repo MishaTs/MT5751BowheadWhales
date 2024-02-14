@@ -4,6 +4,8 @@ author: "Misha Tseitlin, Louise Blackman, Dometa Tuomaite"
 date: "`r format(Sys.Date(), format='%d %B %Y')`"
 fontsize: 11pt
 urlcolor: blue
+bibliography: Bibliography.bib
+csl: ieee.csl
 output: 
   bookdown::pdf_document2:
     toc: false
@@ -64,9 +66,9 @@ MT5751: Estimating Animal Abundance and Biodiversity \\
 In this report, we aim to use distance sampling methods to estimate the abundance of Bowhead whales in Disko Bay. As the data show some observer avoidance, we also wish to explore different approaches used to deal with this issue. 
 
 ## Methods
-Visual aerial surveys were conducted along 41 systematically placed east-west along the West Greenland coast, with a combined length of 4,445km. There were two observation platforms which each recorded the declination angle using inclinometers and the times of the first sighting and when the whale passed abeam, which were used to calculate the perpendicular and forward distances respectively. Both observers also recorded Beaufort sea state and group size, and if there were any differences in size or declination between the observers the mean was taken. The distances were left-truncated to 100m as the view was obscured close to the transect line(Rekdal et al. 2015). In total there were 58 valid whale observations. 
+Visual aerial surveys were conducted along 41 systematically placed east-west transects along the West Greenland coast, with a combined length of 4,445km. There were two observation platforms which each recorded the declination angle using inclinometers and the times of the first sighting and when the whale passed abeam, which were used to calculate the perpendicular and forward distances respectively. Both observers also recorded Beaufort sea state and group size, and if there were any differences in size or declination between the observers the mean was taken. The distances were left-truncated to 100m as the view was obscured close to the transect line [@rekdal_2014_trends]. In total there were 58 valid observations. 
 
-```{r Initial-histogram, echo = F, fig.cap="Histogram of bowhead whale detection distances, coloured by size of detected group"}
+```{r Initial-histogram, echo = F, fig.height=4, fig.cap="Histogram of bowhead whale detection distances, coloured by size of detected group"}
 ggplot(data = bowhead_LT) + 
   geom_histogram(aes(x = distance, fill = as.factor(size)), 
                  breaks = seq(0,2.4, length.out = 12)) +
@@ -77,10 +79,10 @@ ggplot(data = bowhead_LT) +
        fill = "Group size") + 
   theme_bw()
 ```
-An initial plot of the detection distances suggests there could be some line avoidance, as more whales were detected further away from the plane than on the transect, even after the left-truncation. This could violate the assumption in distance sampling that animals are distributed independently with respect to the transect, or the assumption that all animals on the line are detected, depending on whether the whales are hiding or moving away in response to the plane (Buckland et al, 2015). Equally, this could just be stochastic variation as there is only a difference of 4 observations between the 0-0.2 bin and the 0.4-0.6 bin. 
-We considered 3 approaches to deal with this problem. Firstly, treating the difference in detection as random variation and fitting detection functions as normal. This preserves all the observations but will result in overestimating the detection probability (and therefore underestimating abundance) if detection is not certain on the line. Another option is to bin the distances into 0-0.6km, 0.6-0.9km, …, 2.1-2.4km categories so that there are more observations in the first group than the others. This assumes the whales moved away from the observers, so those that would have been detected on the transect were instead seen up to 0.6km away. This method deals well with the potentially violated assumptions, but in grouping the data we lose a lot of information. 
+An initial plot of the detection distances suggests there could be some line avoidance, as more whales were detected further away from the plane than on the transect, even after the left-truncation. This could violate the assumption in distance sampling that animals are distributed independently with respect to the transect, or the assumption that all animals on the line are detected, depending on whether the whales are hiding or moving away [@buckland_2015_distance]. Equally, this could be stochastic variation as there is only a difference of 4 observations between the 0-0.2 bin and the 0.4-0.6 bin. 
+We considered 3 approaches to deal with this problem. Firstly, treating the difference in detection as random variation and fitting detection functions as normal. This preserves all the observations but will result in overestimating the detection probability (therefore underestimating abundance) if detection is not certain on the line. Another option is to bin the distances into 0-0.6km, 0.6-0.9km, …, 2.1-2.4km categories so that there are more observations in the first group than the others. This assumes the whales moved away from the observers, so those that would have been detected on the transect were instead seen further away. This method deals well with the potentially violated assumptions, but in grouping the data we lose information. 
 
-```{r binned-histogram, echo = F, fig.cap = "Histogram of bowhead whale detection distances using custom bins, coloured by size of detected group"}
+```{r binned-histogram, echo = F,fig.height=4, fig.cap = "Histogram of bowhead whale detection distances using custom bins, coloured by size of detected group"}
 histBreaks2 <- c(0, 0.6, 0.9, 1.2, 1.5, 1.8, 2.1, max(bowhead_LT$distance, 
                                                       na.rm = TRUE))
 ggplot(data = bowhead_LT) + 
@@ -92,8 +94,8 @@ ggplot(data = bowhead_LT) +
        fill = "Group size") + 
   theme_bw()
 ```
-The final option we considered is to left-truncate the distances up to the peak in detections at 0.64km. This method ensures we have the monotonic decline in detections with increasing distance, but again loses lots of information and assumes that detection is certain 0.64km away from the plane. The monotonic decrease in detection allowed complex models with multiple covariates and adjustment terms to be fitted successfully, which didn’t happen for the other methods. However, given the small sample size these models likely suffer from over-fitting. 
-```{r truncatedHistogram, fig.cap = "Histogram of truncated distances, coloured by size of group detected"}
+The final option we considered is to left-truncate the distances up to the peak in detections at 0.64km. This method ensures we have the monotonic decline in detections with increasing distance, but again loses information and assumes that detection is certain 0.64km away from the plane. The monotonic decrease in detection allowed complex models with multiple covariates and adjustment terms to be fitted successfully, which didn’t happen for the other methods. However, given the small sample size these models likely suffer from over-fitting. 
+```{r truncatedHistogram, fig.height=4, fig.cap = "Histogram of truncated distances, coloured by size of group detected"}
 bowhead_LT_Trunc = bowhead_LT %>% filter(distance >= 0.64) %>%
   mutate(distance = distance - 0.64)
 ggplot(data = bowhead_LT_Trunc) + 
@@ -106,7 +108,7 @@ ggplot(data = bowhead_LT_Trunc) +
        fill = "Group size") + 
   theme_bw()
 ```
-We used the Distance package to fit models using a maximum likelihood approach. For each data set (unedited, binned, truncated) we fitted half-normal and hazard rate detection functions with all combinations of adjustment terms (cos, Hermite and polynomial) and covariates (group size and Beaufort sea state). We used AIC to compare between models fitted to the same data set. 
+We used the Distance package to fit models using a maximum likelihood approach. For each data set (unedited, binned, truncated) we fitted half-normal and hazard rate detection functions with all combinations of adjustment terms (cosine, Hermite, polynomial) and covariates (group size and Beaufort sea state). We used AIC to compare between models fitted to the same data set. 
  
 ## Results
 
@@ -138,7 +140,7 @@ table2 <- data.frame(
 knitr::kable(table2, caption = "Estimates (and errors) of size on detectability")
 ```
 
-Given raw data set the best model selected by AIC was half-normal detection function with size covariate and no adjustments. It estimates whale abundance as 212 with confidence interval (112.13, 401.06). However, size is not significant, therefore, model without covariate gives similar estimate of whale abundance (229) with confidence interval (112.13, 401.06).
+Given raw data set the best model selected by AIC was half-normal detection function with size covariate and no adjustments. It estimates whale abundance as 212 with confidence interval (112.13, 401.06). However, size is not significant, therefore the model without covariates gives similar estimate of whale abundance (229) with confidence interval (112.13, 401.06).
 
 ```{r rawDataModels, echo = F, results = FALSE, fig.height = 7, fig.cap="Detection functions using original data"}
 par(mfrow = c(2,2))
@@ -158,7 +160,7 @@ gof_ds(baseRawHN, main="Base Observed vs. Expected CDF")#, ks = TRUE)
 gof_ds(sizeRawHN, main="Size Observed vs. Expected CDF")#, ks = TRUE)
 ```
 
-When using binning, AIC selects half-normal detection function with no adjustments and size. Like model using raw data, it gives estimate of abundance of 213 and confidence interval (112.32, 403.31). Size is not significant. 
+When using binning, AIC selects half-normal detection function with no adjustments and size. Like the model using raw data, it gives estimate of abundance of 213 and confidence interval (112.32, 403.31). Size is not significant. 
 
 ```{r rawDataModels2, echo = F, results = FALSE, fig.cap="Detection functions using binned data"}
 par(mfrow = c(1,2))
@@ -172,7 +174,7 @@ plot(sizeBinHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd 
      main = "Half-normal model with covariates")
 ```
 
-Model chosen using truncated data is quite different. The best model is hazard rate with size covariate, with estimate of 1803 whales and confidence interval (461.56, 7045.88). It is worth noting, that size is significant. Nonetheless, given huge standard error, there’s a lot of uncertainty, therefore, it is likely that the model largely overestimates.
+The model chosen using truncated data is quite different. The best model is hazard rate with size covariate, with estimate of 1803 whales and confidence interval (461.56, 7045.88). It is worth noting that size is significant. Nonetheless, given huge standard error, there’s a lot of uncertainty, therefore it is likely that the model largely overestimates.
 
 ```{r rawDataModels3, echo = F, results = FALSE, fig.height = 5, fig.cap="Detection functions using truncated data"}
 par(mfrow = c(2,3))
@@ -202,7 +204,7 @@ Even though detection function using truncated data has lowest AIC, it overestim
 
 ## Discussion
 
-While conducting survey, there are several assumptions that had been violated. The area beneath the aircraft is not visible to surveyors, therefore, we cannot assume that objects on the transect line are detected with certainty. To account for this, passive monitoring such as cameras to count whales on the transect line could be used. Moreover, since whales are never stationary, as they run or hide when noticing observers, assumption of object detection at their initial location is violated. This results in less observations within close distance and we are likely underestimating the true whale abundance due to imperfect detection. To address this availability bias, hidden Markov model could be used (Borchers et al, 2013). HMM copes with a small data by fitting a more restrictive model, which incorporates information on how the aircraft moves.
+While conducting survey, there are several assumptions that had been violated. The area beneath the aircraft is not visible to surveyors, therefore, we cannot assume that objects on the transect line are detected with certainty. To account for this, passive monitoring such as cameras to count whales on the transect line could be used. Moreover, since whales are never stationary, as they run or hide when noticing observers, assumption of object detection at their initial location is violated. This results in less observations within close distance and we are likely underestimating the true whale abundance due to imperfect detection. To address this availability bias, hidden Markov model could be used [@borchers_2013_using]. HMM copes with a small data by fitting a more restrictive model, which incorporates information on how the aircraft moves.
 
 Violation of these assumptions bias estimates of whale abundance – models will underestimate the real number of whales; therefore, truncation of data is needed. However, truncation reduces survey area by 30% and since data is quite unbalanced and sample size is small, it is not a great approximation of how whale abundance would look like in real life and any variation seen in estimates is due to stochasticity.
 
