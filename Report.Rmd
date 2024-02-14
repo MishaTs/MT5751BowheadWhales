@@ -138,7 +138,7 @@ table2 <- data.frame(
 knitr::kable(table2, caption = "Estimates (and errors) of size on detectability")
 ```
 
-Given raw data set the best model selected by AIC was half-normal detection function with size covariate and no adjustments. The model estimates whale abundance as 212 with confidence interval between 112.13 and 401.06. However, covariate included is not statistically significant, therefore, model without covariate gives similar estimate of whale abundance (229) with confidence interval between 112.13 and 401.06.
+Given raw data set the best model selected by AIC was half-normal detection function with size covariate and no adjustments. It estimates whale abundance as 212 with confidence interval (112.13, 401.06). However, size is not significant, therefore, model without covariate gives similar estimate of whale abundance (229) with confidence interval (112.13, 401.06).
 
 ```{r rawDataModels, echo = F, results = FALSE, fig.height = 7, fig.cap="Detection functions using original data"}
 par(mfrow = c(2,2))
@@ -158,7 +158,7 @@ gof_ds(baseRawHN, main="Base Observed vs. Expected CDF")#, ks = TRUE)
 gof_ds(sizeRawHN, main="Size Observed vs. Expected CDF")#, ks = TRUE)
 ```
 
-When using binning, the best model selected by AIC is half-normal with no adjustments and size covariate. Similar to model using raw data, it gives estimate of abundance of 213 and confidence interval between 112.32 and 403.31. Covariate is not statistically significant. 
+When using binning, AIC selects half-normal detection function with no adjustments and size. Like model using raw data, it gives estimate of abundance of 213 and confidence interval (112.32, 403.31). Size is not significant. 
 
 ```{r rawDataModels2, echo = F, results = FALSE, fig.cap="Detection functions using binned data"}
 par(mfrow = c(1,2))
@@ -172,7 +172,7 @@ plot(sizeBinHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd 
      main = "Half-normal model with covariates")
 ```
 
-However, preferred model chosen using truncated data is quite different. The best model is hazard rate with size covariate, which gives an estimate of 1803 whales with confidence interval between 461.56 and 7045.88. It is worth noting, that size covariate is significant here. However, given huge standard error, there’s a lot of uncertainty, therefore, it is likely that the model largely overestimates. It is then followed by half normal model with no covariates and half normal model with size covariate.
+Model chosen using truncated data is quite different. The best model is hazard rate with size covariate, with estimate of 1803 whales and confidence interval (461.56, 7045.88). It is worth noting, that size is significant. Nonetheless, given huge standard error, there’s a lot of uncertainty, therefore, it is likely that the model largely overestimates.
 
 ```{r rawDataModels3, echo = F, results = FALSE, fig.height = 5, fig.cap="Detection functions using truncated data"}
 par(mfrow = c(2,3))
@@ -197,7 +197,7 @@ gof_ds(sizeTruncHN, main="Covariate HN CDF Quantiles")#, ks = TRUE)
 gof_ds(sizeTruncHR, main="Covariate HR CDF Quantiles")#, ks = TRUE)
 ```
 
-Even though detection functions using truncated data has lowest AIC, it overestimates whale abundance. The reason might be limited to sample size and extrapolation based on the area we have no data about. Therefore, it might be best to use half normal detection function with size as a covariate to get the best estimate of whale abundance.
+Even though detection function using truncated data has lowest AIC, it overestimates whale abundance. The reason might be limited to sample size and extrapolation based on the area we have no data about. Therefore, it might be best to use half-normal detection function with size covariate to get the best estimate of whale abundance.
 
 
 ## Discussion
