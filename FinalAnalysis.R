@@ -164,7 +164,7 @@ gof_ds(sizeTruncHN, main="Covariate Half-Normal Observed vs. Expected CDF", ks =
 gof_ds(sizeTruncHR, main="Covariate Hazard Rate Observed vs. Expected CDF", ks = TRUE)
 
 
-
+# break out abundance under both models by region
 # generate abundance estimates for the best raw data models
 region_table <- unique(bowhead_LT[,c("Region.Label", "Area")])
 sample_table <- unique(bowhead_LT[,c("Region.Label", "Sample.Label", "Effort")])
@@ -189,9 +189,21 @@ save(baseRawHN, baseRawHR, sizeRawHN, sizeRawHR,
      baseTruncHN, baseTruncHR, sizeTruncHN, sizeTruncHR,
      file="df-models.RData")
 
-# in reality, we're likely underestimating the true population size due to imperfect detection across-the-board
-# incredibly unlikely that all animals become available at equal rates (since whales mostly are under the water and thsu undetected)
-# in short, we have availability bias that is best dealt with using hidden markov models per the original paper
-# EX: McLaren and Laake's correction factors
-# https://rdrr.io/github/david-borchers/hmltm/f/vignettes/hmltmExercise_solution.Rmd
-# http://workshops.distancesampling.org/standrews-2019/adv/slides/availability.pdf
+# check variance using bootstraps rather than delta method
+# delta-method approximation that assumes independence between uncertainty in the detection function and variability in encounter rate
+# takes ~3 minutes on my computer, likely longer for you
+# check or delete the "cores = " if you don't have 10 cores on your computer
+# I'm running on a 16-core
+# for the full process see: http://examples.distancesampling.org/Distance-variance/variance-distill.html
+est.boot <- bootdht(model=sizeRawHN, flatfile=bowhead_LT,
+                    summary_fun=bootdht_Nhat_summarize,
+                    convert_units=conversion.factor, nboot=999, cores=10)
+alpha <- 0.50
+bootci <- quantile(est.boot$Nhat, probs = c(alpha/2, 1-alpha/2),
+                   na.rm=TRUE)
+# plot boostraps from the 
+par(mfrow = c(1,1))
+hist(est.boot$Nhat, nc=30,
+     main="Distribution of bootstrap estimates\nwithout model uncertainty",
+     xlab="Estimated abundance")
+abline(v=bootci, lwd=2, lty=2)
