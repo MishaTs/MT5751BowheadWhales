@@ -163,6 +163,11 @@ gof_ds(baseTruncHN, main="Base Half-Normal Observed vs. Expected CDF", ks = TRUE
 gof_ds(sizeTruncHN, main="Covariate Half-Normal Observed vs. Expected CDF", ks = TRUE)
 gof_ds(sizeTruncHR, main="Covariate Hazard Rate Observed vs. Expected CDF", ks = TRUE)
 
+# output the models for consistency and processing speed
+save(baseRawHN, baseRawHR, sizeRawHN, sizeRawHR,
+     baseBinHN, baseBinHR, sizeBinHN, sizeBinHR,
+     baseTruncHN, baseTruncHR, sizeTruncHN, sizeTruncHR,
+     file="df-models.RData")
 
 # break out abundance under both models by region
 # generate abundance estimates for the best raw data models
@@ -182,28 +187,89 @@ sizeRawHN_N <- dht(model = sizeRawHN$ddf,
                     region.table = region_table,
                     sample.table = sample_table,
                     obs.table = observation_table)
-
-# output the models
-save(baseRawHN, baseRawHR, sizeRawHN, sizeRawHR,
-     baseBinHN, baseBinHR, sizeBinHN, sizeBinHR,
-     baseTruncHN, baseTruncHR, sizeTruncHN, sizeTruncHR,
-     file="df-models.RData")
+# repeat abundance estimation process for remaining models of interest
+# base binned model
+baseBinHN_N <- dht(model = baseBinHN$ddf, 
+                   region.table = region_table,
+                   sample.table = sample_table,
+                   obs.table = observation_table)
+# size covariate binned data model
+sizeBinHN_N <- dht(model = sizeBinHN$ddf, 
+                   region.table = region_table,
+                   sample.table = sample_table,
+                   obs.table = observation_table)
+# base truncated data model
+baseTruncHN_N <- dht(model = baseTruncHN$ddf, 
+                   region.table = region_table,
+                   sample.table = sample_table,
+                   obs.table = observation_table)
+# size covariate truncated data model
+sizeTruncHN_N <- dht(model = sizeTruncHN$ddf, 
+                   region.table = region_table,
+                   sample.table = sample_table,
+                   obs.table = observation_table)
 
 # check variance using bootstraps rather than delta method
 # delta-method approximation that assumes independence between uncertainty in the detection function and variability in encounter rate
-# takes ~3 minutes on my computer, likely longer for you
+# takes ~3 minutes on my computer, likely longer for most
 # check or delete the "cores = " if you don't have 10 cores on your computer
-# I'm running on a 16-core
 # for the full process see: http://examples.distancesampling.org/Distance-variance/variance-distill.html
 est.boot <- bootdht(model=sizeRawHN, flatfile=bowhead_LT,
                     summary_fun=bootdht_Nhat_summarize,
                     convert_units=conversion.factor, nboot=999, cores=10)
-alpha <- 0.50
+alpha <- 0.05
+# interestingly, the lower bound of our estimate is very poorly constrained with a 95% CI between 0 and 276
 bootci <- quantile(est.boot$Nhat, probs = c(alpha/2, 1-alpha/2),
                    na.rm=TRUE)
-# plot boostraps from the 
+
+# plot generated bootstraps
 par(mfrow = c(1,1))
 hist(est.boot$Nhat, nc=30,
      main="Distribution of bootstrap estimates\nwithout model uncertainty",
      xlab="Estimated abundance")
 abline(v=bootci, lwd=2, lty=2)
+
+# repeat boostraps w/ resample by region rather than by transect
+# our upper CI increases slightly but the lower CI stays at 0
+#est.bootStrata <- bootdht(model=bowhead.hn.null.size, flatfile=bowhead_LT,
+#                    summary_fun=bootdht_Nhat_summarize,
+#                    resample_strata = TRUE,
+#                    convert_units=conversion.factor, nboot=999, cores=10)
+#bootciStrata <- quantile(est.bootStrata$Nhat, probs = c(alpha/2, 1-alpha/2),
+#                    na.rm=TRUE)
+
+
+# this following section is for transparency on full model fitting attempted with the minorly truncated data
+# play around with some adjustment terms with the size model
+# adjustment terms generally aren't included in covariates for whatever reason
+# Cosine(2) is preferred but never monotonic so that's not it
+#bowhead.hn.cos.size <- ds(data = bowhead_LT, key = "hn", adjustment = "cos",
+#                          convert_units = conversion.factor,
+#                          formula = ~size,
+#                          nadj = c(1,2,3,4))
+# Hermite(4) is preferred but is non-monotonic; Hermite(4,6) is not as bad
+#bowhead.hn.herm.size <- ds(data = bowhead_LT, key = "hn", adjustment = "herm",
+#                          convert_units = conversion.factor,
+#                          formula = ~size,
+#                          nadj = c(2,3,4))
+# Poly(4,6) ends up being non-monotonic, so leaving it at Polynomial(4)
+#bowhead.hn.poly.size <- ds(data = bowhead_LT, key = "hn", adjustment = "poly",
+#                           convert_units = conversion.factor,
+#                           formula = ~size,
+#                           nadj = c(1,2,3,4))
+# now repeat for half-normal
+# non-monotonic and g(x) > 1 with a cosine adjustment
+#bowhead.hr.cos.size <- ds(data = bowhead_LT, key = "hr", adjustment = "cos",
+#                          convert_units = conversion.factor,
+#                          formula = ~size,
+#                          nadj = c(1,2,3,4))
+#Hermite(4,6) surprisingly matches everything
+#bowhead.hr.herm.size <- ds(data = bowhead_LT, key = "hr", adjustment = "herm",
+#                          convert_units = conversion.factor,
+#                          formula = ~size,
+#                          nadj = c(2,3,4))
+#Polynomial adjustments don't match monotonicity
+#bowhead.hr.poly.size <- ds(data = bowhead_LT, key = "hr", adjustment = "poly",
+#                          convert_units = conversion.factor,
+#                          formula = ~size,
+#                          nadj = c(1,2,3,4))
