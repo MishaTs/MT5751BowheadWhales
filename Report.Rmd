@@ -149,3 +149,7 @@ Even though detection functions using truncated data has lowest AIC, it overesti
 
 
 ## Discussion
+
+Given that whale count was conducted from the aircraft, there are several assumptions that might be violated. Since the area under the aircraft is not visible to surveyors, it creates a blind strip and, therefore, we cannot assume that objects on the transect line are detected with certainty. To account for this, passive monitoring such as cameras to check for the animals on the transect line could be used. Moreover, assumption that objects are detected at their initial locations is violated as well. Due to avoidance response, as whales notice observers, they might feel threat and are more likely to run away or hide which results in less observations within close distance. Since whales are never stationery, we are likely underestimating the true whale population size due to imperfect detection. To address this availability bias, hidden Markov model could be used (Borchers et al, 2013). HMM copes with a small data by fitting a more restrictive model, which incorporates information on how the plane moves. 
+Violation of these assumptions bias our estimates of whale abundance – models will underestimate the real number of whales; therefore, truncation of data is needed. However, truncation reduces survey area by 30% and since data is quite unbalanced and sample size is small, it is not a great approximation of how whale abundance would look like in real life and any variation seen in estimates is due to stochasticity.
+
