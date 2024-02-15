@@ -233,6 +233,7 @@ gof_ds(sizeTruncHR, main="Covariate HR CDF Quantiles")#, ks = TRUE)
 
 Despite multiple adjustments, we remain concerned about perfect detectability and other DS assumptions. Here, alternatives like passive monitoring (e.g., using cameras or hydrophones) could improve future surveys. As whales also continually move---behaviourally demonstrating observer avoidance---animals are certainly undetected at their initial locations. In tandem, we underestimate true whale abundance due to imperfect detection. Whales are often underwater, likely generating availability bias. To address this, the original analysis uses Hidden Markov Models (HMM) to fit a more restrictive model incorporating information on aircraft movement and whale surfacing.[@borchers_2013_using] Though multi-covariate distance sampling does provide benefits over conventional distance sampling given data heterogeneity and small sample size, we require either larger samples or more relevant covariates to improve estimates.[@marques_improving_2007]
 
+\newpage
 ### Authors' Contributions
 MT, LB, and DT all separately conducted analysis in R and collectively decided to use MT's (edited) models for the final report. For initial drafting, MT wrote the abstract; LB wrote up the methods; and DT wrote results and discussions sections. Final edits for submission are unattributable and were performed by all group members. For more detail on individual contributions, please reference \href{https://github.com/MishaTs/MT5751BowheadWhales}{GitHub}.
 
