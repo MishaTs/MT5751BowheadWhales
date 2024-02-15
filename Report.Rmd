@@ -25,6 +25,7 @@ library(statsecol)
 library(ggplot2)
 library(dplyr)
 library(Distance)
+library(kableExtra)
 data(bowhead_LT)
 load("dfModels.RData")
 
@@ -103,7 +104,7 @@ ggplot(data = bowhead_LT) +
   theme_bw()
 ```
 
-Our second option left-truncated distances until peak detectability at 0.74 km. Thus, we ensure a strict decline in detectability with increasing distance in exchange for discarding 19 more observations (25.7% of our total). Now accounting for potential hiding behaviours (e.g., diving), we still must assume perfect detectability at our new baseline distance---0.74 km. Interestingly, this data better fit complex models with multiple covariates and adjustment terms at the risk of over-fitting and poor generalisability. 
+Our second option left-truncated distances until peak detectability at 0.74 km. Thus, we ensure a strict decline in detectability with increasing distance in exchange for discarding 20 more observations (25.7% of our total). Now accounting for potential hiding behaviours (e.g., diving), we still must assume perfect detectability at our new baseline distance---0.74 km. Interestingly, this data better fit complex models with multiple covariates and adjustment terms at the risk of over-fitting and poor generalisability. 
 
 ```{r truncatedHistogram, fig.height=4, fig.cap = "More truncated bowhead whale detection distances"}
 bowhead_LT_Trunc = bowhead_LT %>% filter(distance >= 0.64) %>%
@@ -137,21 +138,43 @@ table <- data.frame(
 
 # make sure all table contents are justified the same way
 # fix column names
-knitr::kable(table, caption = "Estimated abundance from best-performing models (by AIC)")
+knitr::kable(table, align="c",
+             format = "latex",
+             col.names = c("Key Function",
+                           "Dataset" ,
+                           "Size Incl?",
+                           "Abundance",
+                           "SE",
+                           "Lower CI",
+                           "Upper CI",
+                           "AIC"),
+             caption = "Estimated abundance from best-performing models") %>% 
+   kable_classic(full_width = F)
+
 ```
 
 ```{r table2, echo = FALSE}
 table2 <- data.frame(
 	Model = c("Base HN + size", "Binned HN + size", "Truncated HN + size"),
-	`Size Coefficient` = c(6.16, 5.64, -0.51),
-	SE = c(5046.40, 305.31, 0.26),
-	`Significant?` = c("No", "No", "Yes")
+	`Size Effect` = c(6.16, 5.64, -0.51),
+	SE = c(5046.40, 305.31, 0.26)
 )
 
-knitr::kable(table2, caption = "Estimates (and errors) of size on detectability")
+knitr::kable(table2, 
+             align="c",
+             format = "latex",
+             col.names = c("Model" ,
+                           "Size Effect Magnitude",
+                           "Standard Error"),
+             caption = "Size effects on detectability") %>% 
+   kable_classic(full_width = F)
 ```
 
-Given raw data set the best model selected by AIC was half-normal detection function with size covariate and no adjustments. It estimates whale abundance as 212 with confidence interval (112, 401). However, size is not significant, therefore the model without covariates gives similar estimate of whale abundance (229) with confidence interval (112, 401).
+For the base dataset, AIC preferred a HN detection function with a size covariate and no adjustments which estimated abundance as 212 individuals, only slightly lower than the non-covariate model after accounting for stratified survey design. Binned data produced near-identical results, with a preferred HN function including size. In contrast, truncated data produced substantially higher estimates both for HR and HN models; despite large standard errors, these better matched primary analysis estimates (Table \@ref(tab:table1)). The effect of size also remains unclear---original data suggests larger group sizes improve detectability while truncated data implies the converse (Table \@ref(tab:table2)). Because truncated modelling with HN detection suggests worse fit including size, we side with improved detectability after accounting for size bias: higher detectability for larger groups implies artificially-inflated abundance stemming from overconfidence in detectability for single individuals.
+
+Fitted detection functions confirm this; original data models with size assume large groups are perfectly detected while individual detectability is overestimated in base models (Figure \@ref(fig:rawDataModels)). As most data was observed in strata 2 which, along with strata 9, were the only areas to exhibit varied group size, we cannot comment too much given extreme heterogeneity.[@rekdal_2014_trends] Binning data results spawned near-identical results to this original analysis with less data thus without robust goodness-of-fit testing (Figure \@ref(fig:rawDataModels2)).
+
+In contrast, truncated HN detection functions suggest more extreme detectability underestimates with less-extreme size bias. However, the preferred HR function instead displays a highly narrow shoulder that implies a violation of perfect detectability: the actual fit is driven by just eight observations (Figure \@ref(fig:rawDataModels3)). For cross-data comparability, we thus settle on the suitability of half-normal detection.
 
 ```{r rawDataModels, echo = F, results = FALSE, fig.height = 7, fig.cap="Detection functions using original data"}
 par(mfrow = c(2,2))
@@ -171,8 +194,6 @@ gof_ds(baseRawHN, main="Base Observed vs. Expected CDF")#, ks = TRUE)
 gof_ds(sizeRawHN, main="Size Observed vs. Expected CDF")#, ks = TRUE)
 ```
 
-Using binning, AIC selects half-normal detection function with no adjustments and size. Like the model using raw data, it gives estimate of abundance of 213 and confidence interval (112, 403). Size is not significant. 
-
 ```{r rawDataModels2, echo = F, results = FALSE, fig.cap="Detection functions using binned data"}
 par(mfrow = c(1,2))
 plot(baseBinHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd = 2, 
@@ -184,8 +205,6 @@ plot(sizeBinHN, which=2, pl.col = adjustcolor("steelblue",0.5),border=NULL, lwd 
      ylab = "Detection probability (g(x))", xlab = "Distance", las=1,
      main = "Half-normal model with covariates")
 ```
-
-The model chosen using truncated data is quite different. The best model is hazard rate with size covariate, with estimate of 1803 whales and confidence interval (461, 7045). It is worth noting that size is significant. Nonetheless, given huge standard error, there’s a lot of uncertainty, therefore it is likely that the model largely overestimates.
 
 ```{r rawDataModels3, echo = F, results = FALSE, fig.height = 5, fig.cap="Detection functions using truncated data"}
 par(mfrow = c(2,3))
@@ -210,14 +229,9 @@ gof_ds(sizeTruncHN, main="Covariate HN CDF Quantiles")#, ks = TRUE)
 gof_ds(sizeTruncHR, main="Covariate HR CDF Quantiles")#, ks = TRUE)
 ```
 
-Although the hazard rate model has lowest AIC, it overestimates whale abundance and the sharp decline is not realistic. This might be due to sample size and extrapolation to the area we have no data about. Therefore, it might be best to use half-normal detection function with size covariate to get the best estimate of whale abundance.
-
-
 ## Discussion
 
-While conducting the survey, several assumptions were violated. The area beneath the aircraft was not visible to surveyors, therefore, we cannot assume that certain detectability on the transect line. To account for this, passive monitoring such as cameras could be used. Moreover, since whales are never stationary, as they run or hide when noticing observers, the assumption of object detection at their initial location is violated. This results in less observations within close distance and we are likely underestimating the true whale abundance due to imperfect detection. Whales are underwater for periods of time, further creating availability bias. To address this, hidden Markov model could be used [@borchers_2013_using]. HMM copes with a small data by fitting a more restrictive model, which incorporates information on how the aircraft  and whales move.
-
-Violation of these assumptions bias estimates of whale abundance – models will underestimate the real number of whales; therefore, truncation of data is needed. However, truncation reduces survey area by 30% and since data is quite unbalanced and sample size is small, it is not a realistic approximation of how whale abundance and any variation seen in estimates is possibly due to stochasticity.
+Despite multiple adjustments, we remain concerned about perfect detectability and other DS assumptions. Here, alternatives like passive monitoring (e.g., using cameras or hydrophones) could improve future surveys. As whales also continually move---behaviourally demonstrating observer avoidance---animals are certainly undetected at their initial locations. In tandem, we underestimate true whale abundance due to imperfect detection. Whales are often underwater, likely generating availability bias. To address this, the original analysis uses Hidden Markov Models (HMM) to fit a more restrictive model incorporating information on aircraft movement and whale surfacing.[@borchers_2013_using] Though multi-covariate distance sampling does provide benefits over conventional distance sampling given data heterogeneity and small sample size, we require either larger samples or more relevant covariates to improve estimates.[@marques_improving_2007]
 
 ### Authors' Contributions
 MT, LB, and DT all separately conducted analysis in R and collectively decided to use MT's (edited) models for the final report. For initial drafting, MT wrote the abstract; LB wrote up the methods; and DT wrote results and discussions sections. Final edits for submission are unattributable and were performed by all group members. For more detail on individual contributions, please reference \href{https://github.com/MishaTs/MT5751BowheadWhales}{GitHub}.
