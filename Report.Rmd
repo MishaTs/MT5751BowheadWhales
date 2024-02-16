@@ -69,10 +69,12 @@ Bowhead whales (*Balaena mysticetus*) aggregate each spring to mate in west Gree
 Annual springtime bowhead whale aggregations in Qeqertarsuaq allow for analysing both subpopulation stock rebound after whaling moratoria and estimating baseline population before wider climate change impacts in the Arctic. Using existing visual aerial surveys, we conduct a simplified replication of existing DS analysis using only covariates and adjustment terms to test method robustness and data suitability for more accessible methods for understanding bowhead whale detection, abundance, and impacts of group size. 
 
 ## Methods
-Distance sampling estimates animal abundance using the perpendicular distance between the transect and observed animals. A detection function $g(x)$ is fitted to calculate the probability of detecting an animal at a distance $x$ and account for imperfect observations. Based on rigid half-normal (HN) and hazard-rate (HR) key functions, we can incorporate covariates to model differences in detectability.[@buckland_2015_distance] When $\sigma>0$, we use a log link function. So,
+Distance sampling estimates animal abundance using the perpendicular distance between the transect and observed animals. A detection function $g(x)$ is fitted to calculate the probability of detecting an animal at a distance $x$ and account for imperfect observations. Based on rigid half-normal (HN) and hazard rate (HR) key functions, we can incorporate covariates to model differences in detectability.[@buckland_2015_distance] When $\sigma>0$, we use a log link function. So,
 $$\sigma(\mathbf{z}_i) = exp(\alpha_0 + \sum_{j=1}^n \alpha_jz_{ij})$$
 where $\mathbf{z}_i = (z_{i1},...,z_{in})$ is the vector of covariates for animal $i$ and $\alpha_0,...,\alpha_n$ represent relevant covariate parameters. Another approach to flexibility, adjustment terms, can further improve fit.
- 
+
+We then derive abundance estimates from the detection function: after accounting for stratified survey design, the detection probability is multiplied by encounter rate and a known constant. Variance here results first from detection function uncertainty, which we approximate using the delta method.[@borchers_horvitz-thompson_1998] Then, we incorporate the encounter rate uncertainty based on variance in transect-specific whale abundance estimates relative to survey effort (e.g., transect length in this case) and covariate effects (e.g., group size).[@marques_covariate_2004] Though bootstrapped estimates can supplant delta method approximations, small sample size complicates their interpretation in this case.
+
 After splitting Qeqertarsuaq into 16 strata and 41 systematically-placed east-west transects (4445km combined length), surveying used planes with two observation platforms to record declination angles and times of the first abeam whale sighting---generating perpendicular distances for DS---Beaufort sea state, and whale group size. Meaning resolved any differences in size or declination between observers. Authors left-truncated distances by 100 m due to obscured view close to the transect line, so we retained 58 observations of 74 whales.[@rekdal_2014_trends]
 
 ```{r Initial-histogram, echo = F, fig.height=4, fig.cap="Original bowhead whale detection distances"}
@@ -89,7 +91,7 @@ ggplot(data = bowhead_LT) +
 
 As-is detection distances demonstrate possible line avoidance, where more whales appear further from the plane than on the transect (Figure \@ref(fig:Initial-histogram)). DS assumptions---independent animal distribution with respect to the transect, and perfect detection on the transect line---may not hold if whales hid and/or moved.[@buckland_2015_distance] However, a difference of only 4 observations between 0--0.2 and 0.4--0.6 km bins can fall within typical stochastic variation. Initially, we accepted this random variation and fit detection functions as-is. Though we avoid further data loss, this method may overestimate detection probabilities (thus underestimating abundance) without a perfect detectability baseline distance.
 
-Given the risk of assumption violations, we considered two data adjustments. First, we grouped distances into progressively smaller bins with fewer observations in each subsequent grouping (Figure \@ref(fig:binned-histogram)). This presumes that whales moved away from transect lines and were instead seen further away. Though accounting for potential assumption violations, our grouping copiously discards information. 
+Given the risk of assumption violations, we considered two data adjustments. First, we grouped distances into progressively smaller bins with fewer observations in each subsequent grouping (Figure \@ref(fig:binned-histogram)). This presumes that whales moved away from transect lines and were instead seen further away. Though accounting for potential assumption violations, our grouping copiously discards information. Our second option left-truncated distances until peak detectability at 0.74 km. Thus, we ensure a strict decline in detectability with increasing distance in exchange for discarding 20 more observations (25.7% of our total). Now accounting for potential hiding behaviours (e.g., diving), we still must assume perfect detectability at our new baseline distance---0.74 km. Interestingly, this data better fit complex models with multiple covariates and adjustment terms at the risk of over-fitting and poor generalisability. 
 
 ```{r binned-histogram, echo = F,fig.height=4, fig.cap = "Original bowhead whale detection distances with custom bins"}
 histBreaks2 <- c(0, 0.6, 0.9, 1.2, 1.5, 1.8, 2.1, max(bowhead_LT$distance, 
@@ -103,8 +105,6 @@ ggplot(data = bowhead_LT) +
        fill = "Group size") + 
   theme_bw()
 ```
-
-Our second option left-truncated distances until peak detectability at 0.74 km. Thus, we ensure a strict decline in detectability with increasing distance in exchange for discarding 20 more observations (25.7% of our total). Now accounting for potential hiding behaviours (e.g., diving), we still must assume perfect detectability at our new baseline distance---0.74 km. Interestingly, this data better fit complex models with multiple covariates and adjustment terms at the risk of over-fitting and poor generalisability. 
 
 ```{r truncatedHistogram, fig.height=4, fig.cap = "More truncated bowhead whale detection distances"}
 bowhead_LT_Trunc = bowhead_LT %>% filter(distance >= 0.64) %>%
@@ -234,7 +234,7 @@ gof_ds(sizeTruncHR, main="Covariate HR CDF Quantiles")#, ks = TRUE)
 Despite multiple adjustments, we remain concerned about perfect detectability and other DS assumptions. Here, alternatives like passive monitoring (e.g., using cameras or hydrophones) could improve future surveys. As whales also continually move---behaviourally demonstrating observer avoidance---animals are certainly undetected at their initial locations. In tandem, we underestimate true whale abundance due to imperfect detection. Whales are often underwater, likely generating availability bias. To address this, the original analysis uses Hidden Markov Models (HMM) to fit a more restrictive model incorporating information on aircraft movement and whale surfacing.[@borchers_2013_using] Though multi-covariate distance sampling does provide benefits over conventional distance sampling given data heterogeneity and small sample size, we require either larger samples or more relevant covariates to improve estimates.[@marques_improving_2007]
 
 \newpage
-### Authors' Contributions
+# Authors' Contributions
 MT, LB, and DT all separately conducted analysis in R and collectively decided to use MT's (edited) models for the final report. For initial drafting, MT wrote the abstract; LB wrote up the methods; and DT wrote results and discussions sections. Final edits for submission are unattributable and were performed by all group members. For more detail on individual contributions, please reference \href{https://github.com/MishaTs/MT5751BowheadWhales}{GitHub}.
 
 \newpage
